@@ -1,3 +1,3 @@
-import testOperation from "./test-Operation";
+import testOperation from "./test-operation";
 
 testOperation();

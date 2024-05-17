@@ -1,15 +1,15 @@
-import { OperationArray } from "../src/Operation";
+import { Operation } from "../src/operation";
 import * as assert from "assert";
 
 
 const DOC = "0123456789";
 
 
-function apply(doc: string, ...args: OperationArray[]) {
+function apply(doc: string, ...args: Operation[]) {
   return args.reduce((acc, op) => op.apply(acc), doc);
 }
-function generateOperationArray(newDoc: string) {
-  const res = new OperationArray();
+function generateOperation(newDoc: string) {
+  const res = new Operation();
   let oldInd = -1;
   let newInd: number;
   newDoc.split("").forEach(ch => {
@@ -56,10 +56,10 @@ function test() {
       function test(desc: string, aStr: string, bStr: string) {
         describe(desc, () => {
           describe(`a = "${aStr}", b = "${bStr}"`, () => {
-            const a = generateOperationArray(aStr);
-            const b = generateOperationArray(bStr);
-            const [aPrime, bPrime] = OperationArray.transform(a, b);
-            const [bPrime2, aPrime2] = OperationArray.transform(b, a);
+            const a = generateOperation(aStr);
+            const b = generateOperation(bStr);
+            const [aPrime, bPrime] = Operation.transform(a, b);
+            const [bPrime2, aPrime2] = Operation.transform(b, a);
             const newDoc = apply(DOC, a, bPrime);
 
             it("transform(a, b) === transform(b, a).reverse()", () =>

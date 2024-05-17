@@ -32,7 +32,7 @@ type BasicOperation = Retain | Insert | Delete;
 
 
 
-class OperationArray {
+class Operation {
   operations: BasicOperation[] = [];
   baseLength: number = 0;
   targetLength: number = 0;
@@ -103,8 +103,8 @@ class OperationArray {
 
   // Return the inverse that apply(apply(doc, this), inverse) === doc.
   // Note that the argument should be original doc, not the result of apply(doc, this).
-  invert(doc: string): OperationArray {
-    const inverse = new OperationArray();
+  invert(doc: string): Operation {
+    const inverse = new Operation();
     let ind = 0;
 
     this.operations.forEach(op => {
@@ -122,7 +122,7 @@ class OperationArray {
     return inverse;
   }
 
-  // Returns a merged OperationArray equal to a + b.
+  // Returns a merged Operation equal to a + b.
   // Formally, apply(apply(doc, a), b) = apply(doc, compose(a, b)).
   // 
   // We can use a two-pointer approach to merge the two operations in O(n) time and space,
@@ -134,8 +134,8 @@ class OperationArray {
   // i.e. we can always assume that aOp and bOp are the first operations in doc.
   // Therefore, we can consider a to get the first several letters in apply(doc, a),
   // then consider that how b will change the result of those letters.
-  static compose(a: OperationArray, b: OperationArray): OperationArray {
-    const resArray = new OperationArray();
+  static compose(a: Operation, b: Operation): Operation {
+    const resArray = new Operation();
 
     if (a.targetLength !== b.baseLength)
       throw new Error("The base length of the second operation should be the target length of the first operation.");
@@ -218,11 +218,11 @@ class OperationArray {
   // This function is also recursive.
   // We only need to keep the imaginary cursors in a and b at the same position,
   // then we can always assume that aOp and bOp are the first operations in doc.
-  static transform(a: OperationArray, b: OperationArray): [OperationArray, OperationArray] {
+  static transform(a: Operation, b: Operation): [Operation, Operation] {
     if (a.baseLength !== b.baseLength)
       throw new Error("Both operations should have the same base length.");
 
-    const aPrime = new OperationArray(), bPrime = new OperationArray();
+    const aPrime = new Operation(), bPrime = new Operation();
 
     let aOp = _.clone(a.operations[0]), bOp = _.clone(b.operations[0]);
     let aInd = 1, bInd = 1;
@@ -314,4 +314,4 @@ class OperationArray {
   }
 }
 
-export { OperationArray, Insert, Delete, Retain };
+export { Operation, Insert, Delete, Retain };
