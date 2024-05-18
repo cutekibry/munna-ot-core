@@ -23,19 +23,12 @@ class Delete {
 }
 type BasicOperation = Retain | Insert | Delete;
 
-// BasicOperation = string | number;
-// op < 0: delete -op
-// op > 0: retain op
-// typeof op === string: insert op
-
-// retain(5) ins("hi") del(3)   =>  [5, "hi", -3]
-
-
 
 class Operation {
   operations: BasicOperation[] = [];
   baseLength: number = 0;
   targetLength: number = 0;
+
   addRetain(n: number): this {
     if (n === 0)
       return this;
@@ -101,8 +94,13 @@ class Operation {
     return resStr.join("");
   }
 
-  // Return the inverse that apply(apply(doc, this), inverse) === doc.
-  // Note that the argument should be original doc, not the result of apply(doc, this).
+  /**
+   * Returns the inverse of `this` that `apply(apply(doc, this), inverse) === doc`.
+   * Note that the argument should be original doc, not the result of apply(doc, this).
+   * 
+   * @param doc The original document.
+   * @returns The inverse of `this`.
+   */
   invert(doc: string): Operation {
     const inverse = new Operation();
     let ind = 0;
@@ -122,19 +120,26 @@ class Operation {
     return inverse;
   }
 
-  // Returns a merged Operation equal to a + b.
-  // Formally, apply(apply(doc, a), b) = apply(doc, compose(a, b)).
-  // 
-  // We can use a two-pointer approach to merge the two operations in O(n) time and space,
-  // where n = max(a.operations.length, b.operations.length).
-  //
-  // It's worth noting that this function is recursive.
-  // After merging the first two operations in a and b, we can move to the rest of the operations
-  // without caring about the operations we've merged.
-  // i.e. we can always assume that aOp and bOp are the first operations in doc.
-  // Therefore, we can consider a to get the first several letters in apply(doc, a),
-  // then consider that how b will change the result of those letters.
+  /**
+   * Returns a merged `Operation` equal to `a + b`. Formally, `apply(apply(doc, a), b) = apply(doc, compose(a, b))`.
+   * 
+   * `a` and `b` should be sequential operations, not concurrent. 
+   * 
+   * @param a The first `Operation`.
+   * @param b The second `Operation`.
+   * @returns The merged `Operation`.
+   */
   static compose(a: Operation, b: Operation): Operation {
+    // We can use a two-pointer approach to merge the two operations in O(n) time and space,
+    // where n = max(a.operations.length, b.operations.length).
+    //
+    // It's worth noting that this function is recursive.
+    // After merging the first two operations in a and b, we can move to the rest of the operations
+    // without caring about the operations we've merged.
+    // i.e. we can always assume that aOp and bOp are the first operations in doc.
+    // Therefore, we can consider a to get the first several letters in apply(doc, a),
+    // then consider that how b will change the result of those letters.
+
     const resArray = new Operation();
 
     if (a.targetLength !== b.baseLength)
@@ -210,15 +215,23 @@ class Operation {
     return resArray;
   }
 
-  // Transform takes two operations A and B that happened concurrently and
-  // produces two operations A' and B' (in an array) such that
-  // `apply(apply(S, A), B') = apply(apply(S, B), A')`.
-  // This function is the heart of OT.
-  //
-  // This function is also recursive.
-  // We only need to keep the imaginary cursors in a and b at the same position,
-  // then we can always assume that aOp and bOp are the first operations in doc.
+  /**
+   * Takes two operations `a` and `b` that happened concurrently and
+   * produces two operations `a'` and `b'` such that
+   * `apply(apply(doc, a), b') = apply(apply(doc, b), a')`.
+   * 
+   * `a` and `b` should be concurrent operations, not sequential.
+   * 
+   * This function is commutative, i.e. `transform(a, b) === transform(b, a).reverse()`.
+   * 
+   * @param a One of the operations.
+   * @param b The other operation.
+   * @returns The transformed operations `[a', b']`.
+   */
   static transform(a: Operation, b: Operation): [Operation, Operation] {
+    // This function is also recursive.
+    // We only need to keep the imaginary cursors in a and b at the same position,
+    // then we can always assume that aOp and bOp are the first operations in doc.
     if (a.baseLength !== b.baseLength)
       throw new Error("Both operations should have the same base length.");
 
