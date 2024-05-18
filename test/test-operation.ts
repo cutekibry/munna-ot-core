@@ -55,15 +55,23 @@ function testOperation() {
     describe("Operation.transform equality", () => {
       function test(desc: string, aStr: string, bStr: string) {
         describe(desc, () => {
-          describe(`a = "${aStr}", b = "${bStr}"`, () => {
+          describe(`apply(doc, a) = "${aStr}", apply(doc, b) = "${bStr}"`, () => {
             const a = generateOperation(aStr);
             const b = generateOperation(bStr);
+            const aClone = _.cloneDeep(a), bClone = _.cloneDeep(b);
             const [aPrime, bPrime] = Operation.transform(a, b);
             const [bPrime2, aPrime2] = Operation.transform(b, a);
             const newDoc = apply(DOC, a, bPrime);
 
+            it("transform(a, b) === transform(a, b) (the second time)", () =>
+              assert.deepStrictEqual([aPrime, bPrime], Operation.transform(a, b))
+            );
+            it("transform does not change the input", () => {
+              assert.deepStrictEqual(a, aClone);
+              assert.deepStrictEqual(b, bClone);
+            });
             it("transform(a, b) === transform(b, a).reverse()", () =>
-              assert.deepStrictEqual([aPrime, bPrime], [aPrime2, bPrime2], "")
+              assert.deepStrictEqual([aPrime, bPrime], [aPrime2, bPrime2])
             );
             it("apply(doc, a, b') === apply(doc, b, a')", () =>
               assert.strictEqual(apply(DOC, a, bPrime), apply(DOC, b, aPrime))
