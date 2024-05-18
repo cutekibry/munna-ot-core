@@ -14,5 +14,4 @@ The [Munna](https://bulbapedia.bulbagarden.net/wiki/Munna_(Pok%C3%A9mon))'s imag
   * [ ] Test
 * [x] `Operation`
   * [x] Test
-* [x] `SimpleOperation`
-  * [x] Test
+* ~~`SimpleOperation`~~ (deprecated)
