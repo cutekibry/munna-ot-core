@@ -50,7 +50,7 @@ function isIntentionKept(newDoc: string, a: string, b: string) {
 }
 
 
-function test() {
+function testOperation() {
   describe("Operation", () => {
     describe("Operation.transform equality", () => {
       function test(desc: string, aStr: string, bStr: string) {
@@ -105,4 +105,4 @@ function test() {
     });
   });
 }
-export default test;
+export default testOperation;
