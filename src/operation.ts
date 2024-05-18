@@ -148,9 +148,9 @@ class Operation {
     // Clone the first operation in a and b.
     // Note that we might change the count or content of the operation,
     // so to keep the arguments unchanged we need to clone them.
-    let aOp = _.clone(a.operations[0]), bOp = _.clone(b.operations[0]);
+    let aOp = _.cloneDeep(a.operations[0]), bOp = _.cloneDeep(b.operations[0]);
     let aInd = 1, bInd = 1;
-    while (aOp !== undefined && bOp !== undefined) {
+    while (aOp !== undefined || bOp !== undefined) {
       // If aOp is Delete then we can just add it to the result,
       // since the part we deleted in the beginning has no effect to b.
       if (aOp instanceof Delete) {
@@ -166,10 +166,13 @@ class Operation {
         bOp.content = "";
       }
 
+      else if (aOp === undefined || bOp === undefined)
+        throw new Error("Infinite loop error");
+
       // Below this line we can assume that bOp is Retain or Delete.
       else if (aOp instanceof Retain && bOp instanceof Retain) {
         // Case 1: both are Retain
-        // We can retain the min(aOp.count, bOp.count) characters and recursive.
+        // We can retain the min(aOp.count, bOp.count) characters in document and recursive.
         const minCount = Math.min(aOp.count, bOp.count);
         resArray.addRetain(minCount);
         aOp.count -= minCount;
@@ -177,14 +180,15 @@ class Operation {
       }
       else if (aOp instanceof Retain && bOp instanceof Delete) {
         // Case 2: aOp is Retain and bOp is Delete
-        // We can delete the min(aOp.count, bOp.count) characters and recursive.
+        // We can delete the min(aOp.count, bOp.count) characters in document and recursive.
         const minCount = Math.min(aOp.count, bOp.count);
+        resArray.addDelete(minCount);
         aOp.count -= minCount;
         bOp.count -= minCount;
       }
       else if (aOp instanceof Insert && bOp instanceof Retain) {
         // Case 3: aOp is Insert and bOp is Retain
-        // We can insert the min(aOp.content.length, bOp.count) characters in aOp.content and recursive.
+        // We can insert the min(aOp.content.length, bOp.count) characters into document and recursive.
         const minCount = Math.min(aOp.content.length, bOp.count);
         resArray.addInsert(aOp.content.slice(0, minCount));
         aOp.content = aOp.content.slice(minCount);
@@ -192,26 +196,22 @@ class Operation {
       }
       else if (aOp instanceof Insert && bOp instanceof Delete) {
         // Case 4: aOp is Insert and bOp is Delete
-        // We can insert the min(aOp.content.length, bOp.count) characters and recursive.
+        // We can delete the first min(aOp.content.length, bOp.count) characters in aOp.content and recursive.
         const minCount = Math.min(aOp.content.length, bOp.count);
         aOp.content = aOp.content.slice(minCount);
         bOp.count -= minCount;
       }
 
-      if (aOp.isEmpty()) {
-        aOp = a.operations[aInd];
+      if (aOp !== undefined && aOp.isEmpty()) {
+        aOp = _.cloneDeep(a.operations[aInd]);
         aInd++;
       }
-      if (bOp.isEmpty()) {
-        bOp = b.operations[bInd];
+      if (bOp !== undefined && bOp.isEmpty()) {
+        bOp = _.cloneDeep(b.operations[bInd]);
         bInd++;
       }
     }
 
-    // Because a.targetLength === b.baseLength, this condition should always be false.
-    // But for the sake of robustness, we keep it here.
-    if (aOp !== undefined || bOp !== undefined)
-      throw new Error("Unknown runtime error.");
     return resArray;
   }
 
@@ -237,7 +237,7 @@ class Operation {
 
     const aPrime = new Operation(), bPrime = new Operation();
 
-    let aOp = _.clone(a.operations[0]), bOp = _.clone(b.operations[0]);
+    let aOp = _.cloneDeep(a.operations[0]), bOp = _.cloneDeep(b.operations[0]);
     let aInd = 1, bInd = 1;
     while (aOp !== undefined || bOp !== undefined) {
       if (aOp instanceof Insert && bOp instanceof Insert) {
@@ -312,15 +312,15 @@ class Operation {
         throw new Error("Unknown type error");
 
       if (aOp !== undefined && aOp.isEmpty()) {
-        aOp = _.clone(a.operations[aInd]);
+        aOp = _.cloneDeep(a.operations[aInd]);
         aInd++;
       }
       if (bOp !== undefined && bOp.isEmpty()) {
-        bOp = _.clone(b.operations[bInd]);
+        bOp = _.cloneDeep(b.operations[bInd]);
         bInd++;
       }
     }
-    if (aOp !== undefined || bOp !== undefined) 
+    if (aOp !== undefined || bOp !== undefined)
       throw new Error("Unknown runtime error.");
 
     return [aPrime, bPrime];
