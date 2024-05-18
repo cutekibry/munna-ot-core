@@ -1,4 +1,5 @@
 import * as _ from "lodash";
+import { ZippedOperations } from "./web-data-models/zipped-operations";
 
 class Retain {
   count: number;
@@ -324,6 +325,43 @@ class Operation {
       throw new Error("Unknown runtime error.");
 
     return [aPrime, bPrime];
+  }
+
+  /**
+   * Converts `this` to a `ZippedOperations`.
+   * @returns The `ZippedOperations`.
+   */
+  toZippedOperations(): ZippedOperations {
+    return this.operations.map(op => {
+      if (op instanceof Retain)
+        return { retain: op.count };
+      else if (op instanceof Insert)
+        return { insert: op.content };
+      else if (op instanceof Delete)
+        return { delete: op.count };
+      else
+        throw new TypeError("Unknown type error");
+    });
+  }
+  /**
+   * Converts a `ZippedOperations` to `Operation` and returns.
+   * @param zippedOperations The zipped operations to convert.
+   * @returns The converted `Operation`.
+   */
+  static fromZippedOperations(zippedOperations: ZippedOperations): Operation {
+    const res = new Operation();
+
+    zippedOperations.forEach(op => {
+      if ("retain" in op)
+        res.addRetain(op.retain);
+      else if ("insert" in op)
+        res.addInsert(op.insert);
+      else if ("delete" in op)
+        res.addDelete(op.delete);
+      else
+        throw new TypeError("Unknown type error");
+    })
+    return res;
   }
 }
 
