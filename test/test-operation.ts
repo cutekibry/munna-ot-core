@@ -1,3 +1,4 @@
+import * as _ from "lodash";
 import { Operation } from "../src/operation";
 import * as assert from "assert";
 
@@ -32,6 +33,13 @@ function DeleteOperation(pos: number, len: number) {
   return DOC.slice(0, pos) + DOC.slice(pos + len);
 }
 
+function Insert(length: number, pos: number, str: string) {
+  return (new Operation()).addRetain(pos).addInsert(str).addRetain(length - pos);
+}
+function Delete(length: number, pos: number, count: number) {
+  return (new Operation()).addRetain(pos).addDelete(count).addRetain(length - pos - count);
+}
+
 
 function isIntentionKept(newDoc: string, a: string, b: string) {
   let flag = true;
@@ -52,7 +60,49 @@ function isIntentionKept(newDoc: string, a: string, b: string) {
 
 function testOperation() {
   describe("Operation", () => {
-    describe("Operation.transform equality", () => {
+    describe("Operation.compose", () => {
+      function test(desc: string, a: Operation, b: Operation) {
+        describe(desc, () => {
+          describe(`apply(doc, a) = "${apply(DOC, a)}", apply(doc, a, b) = "${apply(DOC, a, b)}"`, () => {
+            const aClone = _.cloneDeep(a), bClone = _.cloneDeep(b);
+            
+            it("compose(a, b) === compose(a, b) (the second time)", () =>
+              assert.deepStrictEqual(Operation.compose(a, b), Operation.compose(a, b))
+            );
+            it("compose does not change the input", () => {
+              assert.deepStrictEqual(a, aClone);
+              assert.deepStrictEqual(b, bClone);
+            })
+            it("apply(doc, a, b) = apply(doc, compose(a, b))", () =>
+              assert.strictEqual(apply(DOC, a, b), apply(DOC, Operation.compose(a, b)))
+            );
+          });
+        });
+      }
+
+      describe("both are InsertOperation", () => {
+        test("both in the beginning", Insert(10, 0, "abc"), Insert(13, 0, "defg"));
+        test("both in the end", Insert(10, 10, "abc"), Insert(13, 10, "defg"));
+        test("overlapped", Insert(10, 0, "abcd"), Insert(14, 2, "efghi"));
+        test("not overlapped", Insert(10, 0, "abcd"), Insert(14, 5, "efghi"));
+      });
+      describe("one is InsertOperation and the other is DeleteOperation", () => {
+        test("InsertOperation is before DeleteOperation and does not overlap", Insert(10, 0, "abcd"), Delete(14, 5, 3));
+        test("InsertOperation is after DeleteOperation and does not overlap", Insert(10, 5, "abcd"), Delete(14, 0, 3));
+        test("InsertOperation covers DeleteOperation", Insert(10, 0, "abcdefgh"), Delete(18, 2, 3));
+        test("DeleteOperation covers InsertOperation", Insert(10, 2, "cd"), Delete(12, 0, 8));
+        test("InsertOperation is before DeleteOperation and overlaps", Insert(10, 2, "abcdefg"), Delete(17, 5, 8));
+        test("InsertOperation is after DeleteOperation and overlaps", Insert(10, 8, "abcdefg"), Delete(17, 2, 8));
+      });
+      describe("both are DeleteOperation", () => {
+        test("both in the beginning", Delete(10, 0, 3), Delete(7, 0, 4));
+        test("both in the end", Delete(10, 6, 4), Delete(6, 3, 3));
+        test("first one is in the beginning and the second one is in the end", Delete(10, 0, 3), Delete(7, 3, 4));
+        test("first one is in the end and the second one is in the beginning", Delete(10, 6, 4), Delete(6, 0, 3));
+        test("delete the entire document", Delete(10, 3, 4), Delete(6, 0, 6));
+      });
+    })
+    describe("Operation.transform", () => {
       function test(desc: string, aStr: string, bStr: string) {
         describe(desc, () => {
           describe(`apply(doc, a) = "${aStr}", apply(doc, b) = "${bStr}"`, () => {
@@ -80,7 +130,7 @@ function testOperation() {
               assert.ok(isIntentionKept(newDoc, aStr, bStr))
             );
           });
-        })
+        });
       }
 
       describe("both are InsertOperation", () => {
