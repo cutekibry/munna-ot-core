@@ -8,8 +8,10 @@ Some features and interfaces are not implemented / not the same with the origina
 The [Munna](https://bulbapedia.bulbagarden.net/wiki/Munna_(Pok%C3%A9mon))'s image belongs to [Ken Sugimori](https://en.wikipedia.org/wiki/Ken_Sugimori) and is not authorized in MIT license. I believe it's [fair use](https://en.wikipedia.org/wiki/Fair_use).
 
 ## To-dos
-* [ ] `Client`
-  * [ ] Test
+* [x] `Client`
+  * [x] Test
+* [x] `Server`
+  * [x] Test
 * [ ] `Undo`
   * [ ] Test
 * [x] `Operation`
