@@ -141,7 +141,7 @@ function link(client: TestClient, server: TestServer, sessionId: string) {
 
 function testCSInteraction() {
   describe("client-server interaction", () => {
-    function test(desc: string, events: Event[], expectedDoc?: string) {
+    function test(desc: string, events: Event[], expectedDoc?: string | string[]) {
       console.log(desc, events);
       describe(desc, () => {
         const server = new TestServer(new TestServerSocket());
@@ -192,8 +192,11 @@ function testCSInteraction() {
           assert.strictEqual(alice.client.doc.str, server.doc, "alice and server's documents are different");
         });
         if (expectedDoc !== undefined)
-          it("document's value is expected", () => {
-            assert.strictEqual(alice.client.doc.str, expectedDoc, "final document is different from the expected document");
+          it("document's value is expectedly correct", () => {
+            if (typeof expectedDoc === "string")
+              assert.strictEqual(alice.client.doc.str, expectedDoc, "final document is different from the expected document");
+            else 
+              assert.ok(expectedDoc.includes(alice.client.doc.str), "final document is not in any acceptable documents");
           });
       });
     }
@@ -251,6 +254,37 @@ function testCSInteraction() {
           , "14678");
       });
     });
+    describe("both clients", () => {
+      test("alice inserts once, bob inserts once", [
+        new Insert(ALICE, 0, "0123"),
+        new Insert(BOB, 0, "4567"),
+        new Send(ALICE),
+        new Send(BOB),
+        new Send(SERVER_ALICE),
+        new Send(SERVER_BOB),
+        new Send(SERVER_ALICE),
+        new Send(SERVER_BOB),
+      ], ["01234567", "45670123"]);
+      test("on a base document, alice inserts twice, bob inserts once, alice sent after bob sent", [
+        new Insert(ALICE, 0, "0123"),
+        new Send(ALICE),
+        new Send(SERVER_ALICE),
+        new Send(SERVER_BOB),
+        
+        new Insert(ALICE, 3, "456"),  // 0124563
+        new Delete(ALICE, 2, 3),      // 0163
+        new Delete(BOB, 1, 3),        // 0
+        new Send(BOB),
+        new Send(ALICE),
+        new Send(SERVER_ALICE),
+        new Send(SERVER_ALICE),
+        new Send(SERVER_BOB),
+        new Send(ALICE),
+        new Send(SERVER_BOB),
+        new Send(SERVER_ALICE),
+        new Send(SERVER_BOB),
+      ], "06");
+    }); 
   });
 }
 
