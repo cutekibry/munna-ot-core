@@ -1,10 +1,8 @@
 import * as assert from "assert";
 
-import { ClientAwait, ClientBuffered, ClientContext } from "../src/client/client";
+import { Client } from "../src/client/client";
 import { Operation } from "../src/operation";
 import Server from "../src/server/server";
-import AbstractClientSocket from "../src/web-data-models/abstract-client-socket";
-import AbstractServerSocket from "../src/web-data-models/abstract-server-socket";
 import { WebData, WebDataOperation } from "../src/web-data-models/web-data";
 import * as _ from "lodash";
 
@@ -14,129 +12,104 @@ const BOB = "bob";
 const SERVER_ALICE = "server-alice";
 const SERVER_BOB = "server-bob";
 
-class TestServer extends Server<TestServerSocket> { }
-class TestClient extends ClientContext<TestClientSocket> { }
-
-
-class TestClientSocket implements AbstractClientSocket {
-  client: TestClient = null;
-  server: TestServer = null;
+class TestClient extends Client {
   sessionId: string = "";
   blockedWebDatas: WebDataOperation[] = [];
+  server: TestServer = null;
 
-  sendOperation(operation: Operation, revision: number): void {
+  sendOperation(operation: Operation, revision: number): this {
     this.blockedWebDatas.push({
       type: "operation",
       operation: operation.toZippedOperations(),
       revision: revision
     });
-  }
-  register(client: TestClient): void {
-    this.client = client;
+    return this;
   }
 }
 
-class TestServerSocket implements AbstractServerSocket {
+class TestServer extends Server {
   clients: TestClient[] = [];
-  server: TestServer = null;
   blockedWebDatas: WebData[] = [];
 
-  sendAck(sessionId: string): void {
+  sendAck(sessionId: string): this {
     this.blockedWebDatas.push({ type: "acknowledge", sessionId: sessionId });
+    return this;
   }
-  sendOperationExcept(operation: Operation, sessionId: string): void {
+  sendOperationExcept(operation: Operation, sessionId: string): this {
     this.clients.forEach(client => {
-      if (client.getSocket().sessionId !== sessionId)
+      if (client.sessionId !== sessionId)
         this.blockedWebDatas.push({
           type: "operation",
           operation: operation.toZippedOperations(),
-          sessionId: client.getSocket().sessionId
+          sessionId: client.sessionId
         })
-    })
-  }
-  register(server: TestServer): void {
-    this.server = server;
+    });
+    return this;
   }
 }
 
 function sendBlockedWebData(source: TestClient | TestServer, targetSessionId?: string) {
   if (source instanceof TestClient) {
-    const socket = source.getSocket();
-    const firstData = socket.blockedWebDatas.shift();
+    const firstData = source.blockedWebDatas.shift();
 
     if (firstData === undefined)
-      throw new Error(`No data for the given source ${source.getSocket().sessionId}`);
+      throw new Error(`No data for the given source ${source.sessionId}`);
 
-    console.log(`# Sending from ${source.getSocket().sessionId}`, firstData);
+    console.log(`# Sending from ${source.sessionId}`, firstData);
 
-    socket.server.receiveOperation(Operation.fromZippedOperations(firstData.operation), firstData.revision, socket.sessionId);
+    source.server.receiveOperation(Operation.fromZippedOperations(firstData.operation), firstData.revision, source.sessionId);
   }
 
   else if (source instanceof TestServer) {
-    const socket = source.socket;
-    const firstData = socket.blockedWebDatas.filter(data => data.sessionId === targetSessionId)[0];
+    const firstData = source.blockedWebDatas.filter(data => data.sessionId === targetSessionId)[0];
+    const targetClient = source.clients.filter(client => client.sessionId === targetSessionId)[0];
 
     if (firstData === undefined)
       throw new Error(`No data for the given sessionId ${targetSessionId}`);
-    socket.blockedWebDatas = socket.blockedWebDatas.filter(data => data !== firstData);
+    else if (targetClient === undefined)
+      throw new Error(`No client for the given sessionId ${targetSessionId}`);
 
+    source.blockedWebDatas = source.blockedWebDatas.filter(data => data !== firstData);
 
     console.log("# Sending from server", firstData);
 
     if (firstData.type === "operation")
-      socket.clients.forEach(client => {
-        if (client.getSocket().sessionId === firstData.sessionId)
-          client.applyServer(Operation.fromZippedOperations(firstData.operation));
-      });
+      targetClient.applyServer(Operation.fromZippedOperations(firstData.operation));
     else if (firstData.type === "acknowledge")
-      socket.clients.forEach(client => {
-        if (client.getSocket().sessionId === firstData.sessionId)
-          client.ackOperation();
-      });
+      targetClient.ackOperation();
   }
   else
     throw new TypeError("Invalid target");
 }
 
 class Insert {
-  session: "alice" | "bob";
-  pos: number;
-  content: string;
-  constructor(session: "alice" | "bob", pos: number, content: string) {
-    this.session = session;
-    this.pos = pos;
-    this.content = content;
-  }
+  constructor(
+    public session: "alice" | "bob",
+    public pos: number,
+    public content: string
+  ) { }
   tf(doc: string) { return (new Operation()).addRetain(this.pos).addInsert(this.content).addRetain(doc.length - this.pos); }
 }
 class Delete {
-  session: "alice" | "bob";
-  pos: number;
-  count: number;
-  constructor(session: "alice" | "bob", pos: number, count: number) {
-    this.session = session;
-    this.pos = pos;
-    this.count = count;
-  }
+  constructor(
+    public session: "alice" | "bob",
+    public pos: number,
+    public count: number
+  ) { }
   tf(doc: string) { return (new Operation()).addRetain(this.pos).addDelete(this.count).addRetain(Math.max(0, doc.length - this.pos - this.count)); }
 }
 
 class Send {
-  session: "alice" | "bob" | "server-alice" | "server-bob";
-  constructor(session: "alice" | "bob" | "server-alice" | "server-bob") {
-    this.session = session;
-  }
+  constructor(public session: "alice" | "bob" | "server-alice" | "server-bob") { }
 };
 
 type Event = Insert | Delete | Send;
 
 
 function link(client: TestClient, server: TestServer, sessionId: string) {
-  if (client.client.socket instanceof TestClientSocket && server.socket instanceof TestServerSocket) {
-    client.client.socket.server = server;
-    client.client.socket.sessionId = sessionId;
-    server.socket.clients.push(client);
-  }
+  client.server = server;
+  client.sessionId = sessionId;
+  server.clients.push(client);
 }
 
 function testCSInteraction() {
@@ -144,9 +117,9 @@ function testCSInteraction() {
     function test(desc: string, events: Event[], expectedDoc?: string | string[]) {
       console.log(desc, events);
       describe(desc, () => {
-        const server = new TestServer(new TestServerSocket());
-        const alice = new TestClient(new TestClientSocket());
-        const bob = new TestClient(new TestClientSocket());
+        const server = new TestServer();
+        const alice = new TestClient();
+        const bob = new TestClient();
 
         link(alice, server, ALICE);
         link(bob, server, BOB);
@@ -155,9 +128,9 @@ function testCSInteraction() {
           // console.log(event);
           if (event instanceof Insert || event instanceof Delete) {
             if (event.session === ALICE)
-              alice.applyClient(event.tf(alice.client.doc.str));
+              alice.applyClient(event.tf(alice.getDoc()));
             else if (event.session === BOB)
-              bob.applyClient(event.tf(bob.client.doc.str));
+              bob.applyClient(event.tf(bob.getDoc()));
           }
           else if (event instanceof Send) {
             switch (event.session) {
@@ -182,21 +155,21 @@ function testCSInteraction() {
         });
 
         it("all data are sent", () => {
-          assert.strictEqual(alice.client.socket.blockedWebDatas.length, 0, `Test data left in alice's socket: ${JSON.stringify(alice.client.socket.blockedWebDatas)}`);
-          assert.strictEqual(bob.client.socket.blockedWebDatas.length, 0, `Test data left in bob's socket: ${JSON.stringify(bob.client.socket.blockedWebDatas)}`);
-          assert.strictEqual(server.socket.blockedWebDatas.length, 0, `Test data left in server's socket: ${JSON.stringify(server.socket.blockedWebDatas)}`);
+          assert.strictEqual(alice.blockedWebDatas.length, 0, `Test data left in alice's socket: ${JSON.stringify(alice.blockedWebDatas)}`);
+          assert.strictEqual(bob.blockedWebDatas.length, 0, `Test data left in bob's socket: ${JSON.stringify(bob.blockedWebDatas)}`);
+          assert.strictEqual(server.blockedWebDatas.length, 0, `Test data left in server's socket: ${JSON.stringify(server.blockedWebDatas)}`);
         });
 
         it("all documents are synchronized", () => {
-          assert.strictEqual(alice.client.doc.str, bob.client.doc.str, "alice and bob's documents are different");
-          assert.strictEqual(alice.client.doc.str, server.doc, "alice and server's documents are different");
+          assert.strictEqual(alice.getDoc(), bob.getDoc(), "alice and bob's documents are different");
+          assert.strictEqual(alice.getDoc(), server.getDoc(), "alice and server's documents are different");
         });
         if (expectedDoc !== undefined)
           it("document's value is expectedly correct", () => {
             if (typeof expectedDoc === "string")
-              assert.strictEqual(alice.client.doc.str, expectedDoc, "final document is different from the expected document");
-            else 
-              assert.ok(expectedDoc.includes(alice.client.doc.str), "final document is not in any acceptable documents");
+              assert.strictEqual(alice.getDoc(), expectedDoc, "final document is different from the expected document");
+            else
+              assert.ok(expectedDoc.includes(alice.getDoc()), "final document is not in any acceptable documents");
           });
       });
     }
@@ -270,7 +243,7 @@ function testCSInteraction() {
         new Send(ALICE),
         new Send(SERVER_ALICE),
         new Send(SERVER_BOB),
-        
+
         new Insert(ALICE, 3, "456"),  // 0124563
         new Delete(ALICE, 2, 3),      // 0163
         new Delete(BOB, 1, 3),        // 0
@@ -284,7 +257,7 @@ function testCSInteraction() {
         new Send(SERVER_ALICE),
         new Send(SERVER_BOB),
       ], "06");
-    }); 
+    });
   });
 }
 

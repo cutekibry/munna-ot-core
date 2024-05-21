@@ -1,25 +1,14 @@
 import * as _ from "lodash"
 import { Operation } from "../operation"
-import AbstractServerSocket from "../web-data-models/abstract-server-socket"
 
-class Server<SocketT extends AbstractServerSocket> {
-  doc: string;
-  revision: number;
-  operationHistory: Operation[];
-  socket: SocketT;
-
-  constructor(socket: SocketT) {
-    this.doc = "";
-    this.revision = 0;
-    this.operationHistory = [];
-    this.socket = socket;
-    this.socket.register(this);
-  }
+abstract class Server {
+  public operationHistory: Operation[] = [];
+  public revision: number = 0;
+  
+  private doc: string = "";
 
   receiveOperation(operation: Operation, fromRevision: number, sessionId: string) {
     let newOp = _.clone(operation);
-
-    // console.log("! receive", fromRevision, this.revision);
 
     _.range(fromRevision, this.revision).forEach(i => {
       newOp = Operation.transform(newOp, this.operationHistory[i])[0];
@@ -28,9 +17,31 @@ class Server<SocketT extends AbstractServerSocket> {
     this.doc = newOp.apply(this.doc);
     this.operationHistory.push(newOp);
     this.revision++;
-    this.socket.sendAck(sessionId);
-    this.socket.sendOperationExcept(newOp, sessionId);
+    this.sendAck(sessionId);
+    this.sendOperationExcept(newOp, sessionId);
   }
+
+  getDoc() { return this.doc; }
+
+  /**
+   * Should send an acknowledge message to the client with `sessionId`.
+   * 
+   * The sent data should be of type `WebDataAck`.
+   * 
+   * @param sessionId The session id of the client to send the acknowledge message to.
+   * @return void
+   */
+  abstract sendAck(sessionId: string): this;
+
+  /**
+   * Should send `operation` to all clients except the one with `sessionId`.
+   * 
+   * The sent data should be of type `WebDataOperation`.
+   * 
+   * @param operation The operation to send.
+   * @param sessionId The session id of the client to exclude.
+   */
+  abstract sendOperationExcept(operation: Operation, sessionId: string): this;
 }
 
 export default Server;
