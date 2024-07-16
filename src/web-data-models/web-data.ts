@@ -15,4 +15,4 @@ type WebDataOperation = {
  * Promised type for the `event.data` sent between the server and the client.
  */
 type WebData = WebDataAck | WebDataOperation;
-export { WebData, WebDataAck, WebDataOperation };
+export type { WebData, WebDataAck, WebDataOperation };

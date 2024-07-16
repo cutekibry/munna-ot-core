@@ -1,5 +1,5 @@
-import * as _ from "lodash"
-import { Operation } from "../operation"
+import _ from "lodash"
+import { Operation } from "./operation"
 
 abstract class Server {
   public operationHistory: Operation[] = [];

@@ -1,23 +1,23 @@
 {
-  "name": "munna-ot",
+  "name": "munna-ot-core",
   "version": "0.0.0",
-  "main": "index.js",
+  "type": "module",
   "scripts": {
-    "test": "ts-mocha test/test.ts"
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest"
   },
-  "author": "Tsukimaru Oshawott",
-  "license": "MIT",
-  "description": "An almost reimplement of Operational-Transformation/ot.js in Typescript with better readability.",
   "dependencies": {
     "lodash": "^4.17.21"
   },
   "devDependencies": {
     "@types/lodash": "^4.17.1",
-    "@types/mocha": "^10.0.6",
+    "@types/node": "^20.14.10",
     "mocha": "^10.4.0",
     "ts-node": "^10.9.2",
-    "tsc": "^2.0.4",
-    "typescript": "^5.4.5",
-    "ts-mocha": "^10.0.0"
+    "typescript": "^5.2.2",
+    "vite": "^5.3.1",
+    "vitest": "^2.0.3"
   }
 }

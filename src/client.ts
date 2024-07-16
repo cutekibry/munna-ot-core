@@ -1,4 +1,4 @@
-import { Operation } from "../operation";
+import { Operation } from "./operation";
 
 
 interface ClientState {
@@ -7,7 +7,7 @@ interface ClientState {
 
   // Apply a remote operation to the client's document.
   applyServer(context: Client, operation: Operation): ClientState
-  
+
   // Acknowledge the operation that the client last sent to the server.
   ackOperation(context: Client): ClientState
 }
@@ -28,7 +28,7 @@ class ClientStateSync implements ClientState {
     context.revision++;
     return this;
   }
-  ackOperation(context: Client) {
+  ackOperation() {
     throw new Error("ackOperation on ClientSync is invalid");
     return this;
   }
@@ -44,7 +44,7 @@ class ClientStateAwait implements ClientState {
     return new ClientStateBuffered();
   }
   applyServer(context: Client, operation: Operation) {
-    const [operationPrime, _] = Operation.transform(operation, context.awaitOperation);
+    const [operationPrime, __] = Operation.transform(operation, context.awaitOperation!);
     context.applyOperation(operationPrime);
     context.revision++;
     return this;
@@ -58,7 +58,7 @@ class ClientStateBuffered implements ClientState {
   applyClient(context: Client, operation: Operation) {
     context.applyOperation(operation);
 
-    context.bufferedOperation = Operation.compose(context.bufferedOperation, operation);
+    context.bufferedOperation = Operation.compose(context.bufferedOperation!, operation);
 
     // Since we are buffering, we don't need to change the revision.
     // this.revision++;
@@ -66,8 +66,8 @@ class ClientStateBuffered implements ClientState {
     return new ClientStateBuffered();
   }
   applyServer(context: Client, operation: Operation) {
-    const [operationPrime1, awaitOperationPrime] = Operation.transform(operation, context.awaitOperation);
-    const [operationPrime2, bufferedOperationPrime] = Operation.transform(operationPrime1, context.bufferedOperation);
+    const [operationPrime1, awaitOperationPrime] = Operation.transform(operation, context.awaitOperation!);
+    const [operationPrime2, bufferedOperationPrime] = Operation.transform(operationPrime1, context.bufferedOperation!);
 
     context.applyOperation(operationPrime2);
     [context.awaitOperation, context.bufferedOperation] = [awaitOperationPrime, bufferedOperationPrime];
@@ -78,7 +78,7 @@ class ClientStateBuffered implements ClientState {
   ackOperation(context: Client) {
     [context.awaitOperation, context.bufferedOperation] = [context.bufferedOperation, null];
 
-    context.sendOperation(context.awaitOperation, context.revision - 1);
+    context.sendOperation(context.awaitOperation!, context.revision - 1);
 
     return new ClientStateAwait();
   }
@@ -86,8 +86,8 @@ class ClientStateBuffered implements ClientState {
 
 abstract class Client {
   public revision: number = 0;
-  public awaitOperation: Operation = null;
-  public bufferedOperation: Operation = null;
+  public awaitOperation: Operation | null = null;
+  public bufferedOperation: Operation | null = null;
   public state: ClientState = new ClientStateSync();
 
   private doc: string = "";
@@ -102,4 +102,5 @@ abstract class Client {
   abstract sendOperation(operation: Operation, revision: number): this
 }
 
-export { Client, ClientStateSync, ClientStateAwait, ClientStateBuffered, ClientState };
+export { Client, ClientStateSync, ClientStateAwait, ClientStateBuffered };
+export type { ClientState };

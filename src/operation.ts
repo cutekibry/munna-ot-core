@@ -97,7 +97,7 @@ class Operation {
 
   /**
    * Returns the inverse of `this` that `apply(apply(doc, this), inverse) === doc`.
-   * Note that the argument should be original doc, not the result of apply(doc, this).
+   * Note that the argument `doc` should be original doc, not the result of apply(doc, this).
    * 
    * @param doc The original document.
    * @returns The inverse of `this`.
