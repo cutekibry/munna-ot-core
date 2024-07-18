@@ -1,5 +1,5 @@
 import _ from "lodash";
-import { Operation } from "../src/operation";
+import { Operation } from "../lib/operation";
 
 import { it, describe, expect } from "vitest";
 

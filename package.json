@@ -1,11 +1,25 @@
 {
+  "description": "An almost reimplement of Operational-Transformation/ot.js in Typescript and with better readability",
   "name": "munna-ot-core",
+  "author": "Tsukimaru Oshawott <cutekibry@gmail.com>",
+  "license": "MIT",
+  "private": false,
   "version": "0.0.0",
   "type": "module",
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/munna-ot-core.umd.cjs",
+  "module": "./dist/munna-ot-core.js",
+  "types": "./dist/main.d.ts",
+  "exports": {
+    "types": "./dist/main.d.ts",
+    "import": "./dist/munna-ot-core.js",
+    "require": "./dist/munna-ot-core.umd.cjs"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview",
     "test": "vitest"
   },
   "dependencies": {
@@ -18,6 +32,7 @@
     "ts-node": "^10.9.2",
     "typescript": "^5.2.2",
     "vite": "^5.3.1",
+    "vite-plugin-dts": "^3.9.1",
     "vitest": "^2.0.3"
   }
 }

@@ -1,10 +1,10 @@
 import _ from "lodash";
 import { describe, it, expect } from "vitest";
 
-import { Client } from "../src/client";
-import { Operation } from "../src/operation";
-import Server from "../src/server";
-import { WebData, WebDataOperation } from "../src/web-data-models/web-data";
+import { Client } from "../lib/client";
+import { Operation } from "../lib/operation";
+import Server from "../lib/server";
+import { WebData, WebDataOperation } from "../lib/web-data-models/web-data";
 
 
 const ALICE = "alice";

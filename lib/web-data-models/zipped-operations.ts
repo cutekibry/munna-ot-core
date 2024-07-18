@@ -5,4 +5,4 @@ type ZippedBasicOperation = { retain: number } | { insert: string } | { delete: 
  */
 type ZippedOperations = ZippedBasicOperation[];
 
-export { ZippedBasicOperation, ZippedOperations };
+export type { ZippedBasicOperation, ZippedOperations };

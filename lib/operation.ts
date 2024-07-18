@@ -365,4 +365,5 @@ class Operation {
   }
 }
 
+export type { BasicOperation };
 export { Operation, Insert, Delete, Retain };
