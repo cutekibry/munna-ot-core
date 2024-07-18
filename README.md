@@ -1,4 +1,4 @@
-# munna-ot
+# munna-ot-core
 ![517Munna_Dream.png](doc/517Munna_Dream.png)
 
 An **almost** reimplement of [Operational-Transformation/ot.js](https://github.com/Operational-Transformation/ot.js) in Typescript and with better readability.
