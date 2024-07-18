@@ -1,4 +1,6 @@
 # munna-ot-core
+![](https://github.com/cutekibry/munna-ot-core/actions/workflows/npm-publish.yml/badge.svg)
+
 ![517Munna_Dream.png](doc/517Munna_Dream.png)
 
 An **almost** reimplement of [Operational-Transformation/ot.js](https://github.com/Operational-Transformation/ot.js) in Typescript and with better readability.
