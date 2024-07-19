@@ -1,4 +1,4 @@
-import { ZippedOperations } from "./zipped-operations";
+import { BasicOperation } from "../../lib/operation";
 
 type WebDataAck = {
   type: "acknowledge";
@@ -6,7 +6,7 @@ type WebDataAck = {
 }
 type WebDataOperation = {
   type: "operation";
-  operation: ZippedOperations;
+  operation: BasicOperation[];
   revision?: number;
   sessionId?: string;
 }

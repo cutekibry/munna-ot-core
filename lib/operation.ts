@@ -1,28 +1,28 @@
-import * as _ from "lodash";
-import { ZippedOperations } from "./web-data-models/zipped-operations";
+import _ from "lodash";
 
-class Retain {
-  count: number;
-  constructor(count: number) {
-    this.count = count;
-  }
-  isEmpty(): boolean { return this.count === 0; }
+
+type BasicOperation = { retain: number } | { insert: string } | { delete: number };
+
+function isRetain(op: BasicOperation): op is { retain: number } {
+  return op != null && op.hasOwnProperty("retain");
 }
-class Insert {
-  content: string;
-  constructor(content: string) {
-    this.content = content;
-  }
-  isEmpty(): boolean { return this.content === ""; }
+function isInsert(op: BasicOperation): op is { insert: string } {
+  return op != null && op.hasOwnProperty("insert");
 }
-class Delete {
-  count: number;
-  constructor(count: number) {
-    this.count = count;
-  }
-  isEmpty(): boolean { return this.count === 0; }
+function isDelete(op: BasicOperation): op is { delete: number } {
+  return op != null && op.hasOwnProperty("delete");
 }
-type BasicOperation = Retain | Insert | Delete;
+
+function isEmptyBasicOp(op: BasicOperation): boolean {
+  if (isRetain(op))
+    return op.retain === 0;
+  else if (isInsert(op))
+    return op.insert === "";
+  else if (isDelete(op))
+    return op.delete === 0;
+  else
+    throw new TypeError("Unknown type error");
+}
 
 
 class Operation {
@@ -37,10 +37,10 @@ class Operation {
     this.targetLength += n;
 
     const back = this.operations[this.operations.length - 1];
-    if (back instanceof Retain)
-      back.count += n;
+    if (isRetain(back))
+      back.retain += n;
     else
-      this.operations.push(new Retain(n));
+      this.operations.push({ retain: n });
     return this;
   }
   addInsert(str: string): this {
@@ -49,10 +49,10 @@ class Operation {
     this.targetLength += str.length;
 
     const back = this.operations[this.operations.length - 1];
-    if (back instanceof Insert)
-      back.content += str;
+    if (isInsert(back))
+      back.insert += str;
     else
-      this.operations.push(new Insert(str));
+      this.operations.push({ insert: str });
     return this;
   }
   addDelete(n: number): this {
@@ -62,10 +62,10 @@ class Operation {
     this.baseLength += n;
 
     const back = this.operations[this.operations.length - 1];
-    if (back instanceof Delete)
-      back.count += n;
+    if (isDelete(back))
+      back.delete += n;
     else
-      this.operations.push(new Delete(n));
+      this.operations.push({ delete: n });
     return this;
   }
 
@@ -77,16 +77,16 @@ class Operation {
     let ind = 0;
 
     this.operations.forEach(op => {
-      if (op instanceof Retain) {
-        if (ind + op.count > doc.length)
+      if (isRetain(op)) {
+        if (ind + op.retain > doc.length)
           throw new Error("The string is too short.");
-        resStr.push(doc.slice(ind, ind + op.count));
-        ind += op.count;
+        resStr.push(doc.slice(ind, ind + op.retain));
+        ind += op.retain;
       }
-      else if (op instanceof Insert)
-        resStr.push(op.content);
-      else if (op instanceof Delete)
-        ind += op.count;
+      else if (isInsert(op))
+        resStr.push(op.insert);
+      else if (isDelete(op))
+        ind += op.delete;
     })
 
     if (ind !== doc.length)
@@ -107,15 +107,15 @@ class Operation {
     let ind = 0;
 
     this.operations.forEach(op => {
-      if (op instanceof Retain) {
-        inverse.addRetain(op.count);
-        ind += op.count;
+      if (isRetain(op)) {
+        inverse.addRetain(op.retain);
+        ind += op.retain;
       }
-      else if (op instanceof Insert)
-        inverse.addDelete(op.content.length);
-      else if (op instanceof Delete) {
-        inverse.addInsert(doc.slice(ind, ind + op.count));
-        ind += op.count;
+      else if (isInsert(op))
+        inverse.addDelete(op.insert.length);
+      else if (isDelete(op)) {
+        inverse.addInsert(doc.slice(ind, ind + op.delete));
+        ind += op.delete;
       }
     })
     return inverse;
@@ -154,60 +154,60 @@ class Operation {
     while (aOp !== undefined || bOp !== undefined) {
       // If aOp is Delete then we can just add it to the result,
       // since the part we deleted in the beginning has no effect to b.
-      if (aOp instanceof Delete) {
-        resArray.addDelete(aOp.count);
-        aOp.count = 0;
+      if (isDelete(aOp)) {
+        resArray.addDelete(aOp.delete);
+        aOp.delete = 0;
       }
 
       // Below this line we can assume that aOp is Retain or Insert.
       // In this case, if bOp is Insert, we can just add it to the result
       // for the same reason as above.
-      else if (bOp instanceof Insert) {
-        resArray.addInsert(bOp.content);
-        bOp.content = "";
+      else if (isInsert(bOp)) {
+        resArray.addInsert(bOp.insert);
+        bOp.insert = "";
       }
 
       else if (aOp === undefined || bOp === undefined)
         throw new Error("Infinite loop error");
 
       // Below this line we can assume that bOp is Retain or Delete.
-      else if (aOp instanceof Retain && bOp instanceof Retain) {
+      else if (isRetain(aOp) && isRetain(bOp)) {
         // Case 1: both are Retain
         // We can retain the min(aOp.count, bOp.count) characters in document and recursive.
-        const minCount = Math.min(aOp.count, bOp.count);
+        const minCount = Math.min(aOp.retain, bOp.retain);
         resArray.addRetain(minCount);
-        aOp.count -= minCount;
-        bOp.count -= minCount;
+        aOp.retain -= minCount;
+        bOp.retain -= minCount;
       }
-      else if (aOp instanceof Retain && bOp instanceof Delete) {
+      else if (isRetain(aOp) && isDelete(bOp)) {
         // Case 2: aOp is Retain and bOp is Delete
         // We can delete the min(aOp.count, bOp.count) characters in document and recursive.
-        const minCount = Math.min(aOp.count, bOp.count);
+        const minCount = Math.min(aOp.retain, bOp.delete);
         resArray.addDelete(minCount);
-        aOp.count -= minCount;
-        bOp.count -= minCount;
+        aOp.retain -= minCount;
+        bOp.delete -= minCount;
       }
-      else if (aOp instanceof Insert && bOp instanceof Retain) {
+      else if (isInsert(aOp) && isRetain(bOp)) {
         // Case 3: aOp is Insert and bOp is Retain
         // We can insert the min(aOp.content.length, bOp.count) characters into document and recursive.
-        const minCount = Math.min(aOp.content.length, bOp.count);
-        resArray.addInsert(aOp.content.slice(0, minCount));
-        aOp.content = aOp.content.slice(minCount);
-        bOp.count -= minCount;
+        const minCount = Math.min(aOp.insert.length, bOp.retain);
+        resArray.addInsert(aOp.insert.slice(0, minCount));
+        aOp.insert = aOp.insert.slice(minCount);
+        bOp.retain -= minCount;
       }
-      else if (aOp instanceof Insert && bOp instanceof Delete) {
+      else if (isInsert(aOp) && isDelete(bOp)) {
         // Case 4: aOp is Insert and bOp is Delete
         // We can delete the first min(aOp.content.length, bOp.count) characters in aOp.content and recursive.
-        const minCount = Math.min(aOp.content.length, bOp.count);
-        aOp.content = aOp.content.slice(minCount);
-        bOp.count -= minCount;
+        const minCount = Math.min(aOp.insert.length, bOp.delete);
+        aOp.insert = aOp.insert.slice(minCount);
+        bOp.delete -= minCount;
       }
 
-      if (aOp !== undefined && aOp.isEmpty()) {
+      if (aOp !== undefined && isEmptyBasicOp(aOp)) {
         aOp = _.cloneDeep(a.operations[aInd]);
         aInd++;
       }
-      if (bOp !== undefined && bOp.isEmpty()) {
+      if (bOp !== undefined && isEmptyBasicOp(bOp)) {
         bOp = _.cloneDeep(b.operations[bInd]);
         bInd++;
       }
@@ -241,82 +241,82 @@ class Operation {
     let aOp = _.cloneDeep(a.operations[0]), bOp = _.cloneDeep(b.operations[0]);
     let aInd = 1, bInd = 1;
     while (aOp !== undefined || bOp !== undefined) {
-      if (aOp instanceof Insert && bOp instanceof Insert) {
+      if (isInsert(aOp) && isInsert(bOp)) {
         // If both are Insert, we can just move them to the result.
         // To ensure transform(a, b) and transform(b, a) return the same a' and b',
         // we need to have a strict order of aOp and bOp.
         // We can simply compare the content.
-        if (aOp.content < bOp.content) {
-          aPrime.addInsert(aOp.content);
-          bPrime.addRetain(aOp.content.length);
-          aOp.content = "";
+        if (aOp.insert < bOp.insert) {
+          aPrime.addInsert(aOp.insert);
+          bPrime.addRetain(aOp.insert.length);
+          aOp.insert = "";
         }
         else {
-          aPrime.addRetain(bOp.content.length);
-          bPrime.addInsert(bOp.content);
-          bOp.content = "";
+          aPrime.addRetain(bOp.insert.length);
+          bPrime.addInsert(bOp.insert);
+          bOp.insert = "";
         }
       }
-      else if (aOp instanceof Insert) {
-        aPrime.addInsert(aOp.content);
-        bPrime.addRetain(aOp.content.length);
-        aOp.content = "";
+      else if (isInsert(aOp)) {
+        aPrime.addInsert(aOp.insert);
+        bPrime.addRetain(aOp.insert.length);
+        aOp.insert = "";
       }
-      else if (bOp instanceof Insert) {
-        bPrime.addInsert(bOp.content);
-        aPrime.addRetain(bOp.content.length);
-        bOp.content = "";
+      else if (isInsert(bOp)) {
+        bPrime.addInsert(bOp.insert);
+        aPrime.addRetain(bOp.insert.length);
+        bOp.insert = "";
       }
 
       // Below this line we can assume that aOp and bOp are Retain or Delete.
-      else if (aOp instanceof Retain && bOp instanceof Retain) {
+      else if (isRetain(aOp) && isRetain(bOp)) {
         // Case 1: both are Retain
         // Both operations have the same intention,
         // so we can retain the min(aOp.count, bOp.count) characters.
-        const minCount = Math.min(aOp.count, bOp.count);
+        const minCount = Math.min(aOp.retain, bOp.retain);
         aPrime.addRetain(minCount);
         bPrime.addRetain(minCount);
-        aOp.count -= minCount;
-        bOp.count -= minCount;
+        aOp.retain -= minCount;
+        bOp.retain -= minCount;
       }
-      else if (aOp instanceof Delete && bOp instanceof Delete) {
+      else if (isDelete(aOp) && isDelete(bOp)) {
         // Case 2: aOp is Delete and bOp is Delete
         // Both operations have the same intention,
         // so just skip the min(aOp.count, bOp.count) characters.
         // Note that we should do nothing in a' and b',
         // since the characters are already deleted in a and b,
         // and we don't need to move the cursor forward.
-        const minCount = Math.min(aOp.count, bOp.count);
-        aOp.count -= minCount;
-        bOp.count -= minCount;
+        const minCount = Math.min(aOp.delete, bOp.delete);
+        aOp.delete -= minCount;
+        bOp.delete -= minCount;
       }
-      else if (aOp instanceof Retain && bOp instanceof Delete) {
+      else if (isRetain(aOp) && isDelete(bOp)) {
         // Case 3: aOp is Retain and bOp is Delete
         // The main intention is to delete because Retain just skip the characters,
         // not have strong intention to keep them.
         // Therefore, in b' we need to delete characters since they are not deleted in a;
         // in a' we should do nothing for the same reason in Case 2.
-        const minCount = Math.min(aOp.count, bOp.count);
+        const minCount = Math.min(aOp.retain, bOp.delete);
         bPrime.addDelete(minCount);
-        aOp.count -= minCount;
-        bOp.count -= minCount;
+        aOp.retain -= minCount;
+        bOp.delete -= minCount;
       }
-      else if (aOp instanceof Delete && bOp instanceof Retain) {
+      else if (isDelete(aOp) && isRetain(bOp)) {
         // Case 4: aOp is Delete and bOp is Retain
         // The same as Case 3.
-        const minCount = Math.min(aOp.count, bOp.count);
+        const minCount = Math.min(aOp.delete, bOp.retain);
         aPrime.addDelete(minCount);
-        aOp.count -= minCount;
-        bOp.count -= minCount;
+        aOp.delete -= minCount;
+        bOp.retain -= minCount;
       }
       else
         throw new Error("Unknown type error");
 
-      if (aOp !== undefined && aOp.isEmpty()) {
+      if (aOp !== undefined && isEmptyBasicOp(aOp)) {
         aOp = _.cloneDeep(a.operations[aInd]);
         aInd++;
       }
-      if (bOp !== undefined && bOp.isEmpty()) {
+      if (bOp !== undefined && isEmptyBasicOp(bOp)) {
         bOp = _.cloneDeep(b.operations[bInd]);
         bInd++;
       }
@@ -328,42 +328,24 @@ class Operation {
   }
 
   /**
-   * Converts `this` to a `ZippedOperations`.
-   * @returns The `ZippedOperations`.
+   * Creates an `Operation` object from an array of `BasicOperation` objects.
+   * 
+   * @param ops - An array of `BasicOperation` objects.
+   * @returns The created `Operation` object.
    */
-  toZippedOperations(): ZippedOperations {
-    return this.operations.map(op => {
-      if (op instanceof Retain)
-        return { retain: op.count };
-      else if (op instanceof Insert)
-        return { insert: op.content };
-      else if (op instanceof Delete)
-        return { delete: op.count };
-      else
-        throw new TypeError("Unknown type error");
-    });
-  }
-  /**
-   * Converts a `ZippedOperations` to `Operation` and returns.
-   * @param zippedOperations The zipped operations to convert.
-   * @returns The converted `Operation`.
-   */
-  static fromZippedOperations(zippedOperations: ZippedOperations): Operation {
+  static fromBasicOperations(ops: BasicOperation[]): Operation {
     const res = new Operation();
-
-    zippedOperations.forEach(op => {
-      if ("retain" in op)
+    ops.forEach(op => {
+      if (isRetain(op))
         res.addRetain(op.retain);
-      else if ("insert" in op)
+      else if (isInsert(op))
         res.addInsert(op.insert);
-      else if ("delete" in op)
+      else if (isDelete(op))
         res.addDelete(op.delete);
-      else
-        throw new TypeError("Unknown type error");
     })
     return res;
   }
 }
 
 export type { BasicOperation };
-export { Operation, Insert, Delete, Retain };
+export { Operation, isDelete, isInsert, isRetain, isEmptyBasicOp };

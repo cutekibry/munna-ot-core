@@ -1,10 +1,9 @@
 import _ from "lodash";
 import { describe, it, expect } from "vitest";
 
-import { Client } from "../lib/client";
-import { Operation } from "../lib/operation";
-import Server from "../lib/server";
-import { WebData, WebDataOperation } from "../lib/web-data-models/web-data";
+import { Operation } from "../../lib/operation";
+import TestClient from "./test-client";
+import TestServer from "./test-server";
 
 
 const ALICE = "alice";
@@ -13,41 +12,6 @@ const SERVER_ALICE = "server-alice";
 const SERVER_BOB = "server-bob";
 
 
-class TestClient extends Client {
-  sessionId: string = "";
-  blockedWebDatas: WebDataOperation[] = [];
-  server: TestServer;
-
-  sendOperation(operation: Operation, revision: number): this {
-    this.blockedWebDatas.push({
-      type: "operation",
-      operation: operation.toZippedOperations(),
-      revision: revision
-    });
-    return this;
-  }
-}
-
-class TestServer extends Server {
-  clients: TestClient[] = [];
-  blockedWebDatas: WebData[] = [];
-
-  sendAck(sessionId: string): this {
-    this.blockedWebDatas.push({ type: "acknowledge", sessionId: sessionId });
-    return this;
-  }
-  sendOperationExcept(operation: Operation, sessionId: string): this {
-    this.clients.forEach(client => {
-      if (client.sessionId !== sessionId)
-        this.blockedWebDatas.push({
-          type: "operation",
-          operation: operation.toZippedOperations(),
-          sessionId: client.sessionId
-        })
-    });
-    return this;
-  }
-}
 
 function sendBlockedWebData(source: TestClient | TestServer, targetSessionId?: string) {
   if (source instanceof TestClient) {
@@ -58,7 +22,7 @@ function sendBlockedWebData(source: TestClient | TestServer, targetSessionId?: s
 
     // console.log(`# Sending from ${source.sessionId}`, firstData);
 
-    source.server.receiveOperation(Operation.fromZippedOperations(firstData.operation), firstData.revision!, source.sessionId);
+    source.server.receiveOperation(Operation.fromBasicOperations(firstData.operation), firstData.revision!, source.sessionId);
   }
 
   else if (source instanceof TestServer) {
@@ -75,7 +39,7 @@ function sendBlockedWebData(source: TestClient | TestServer, targetSessionId?: s
     // console.log("# Sending from server", firstData);
 
     if (firstData.type === "operation")
-      targetClient.applyServer(Operation.fromZippedOperations(firstData.operation));
+      targetClient.applyServer(Operation.fromBasicOperations(firstData.operation));
     else if (firstData.type === "acknowledge")
       targetClient.ackOperation();
   }
