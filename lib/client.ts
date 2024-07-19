@@ -1,14 +1,37 @@
 import { Operation } from "./operation";
 
 
+/**
+ * Represents the state of a client in the text editor.
+ */
 interface ClientState {
-  // Apply a local operation to the client's document and send it to the server.
+  /**
+   * Apply a local operation to the client's document and send it to the server.
+   * 
+   * Called when the client performs an operation.
+   * @param context The client context.
+   * @param operation The operation to apply.
+   * @returns The updated client state.
+   */
   applyClient(context: Client, operation: Operation): ClientState
 
-  // Apply a remote operation to the client's document.
+  /**
+   * Apply a remote operation from server to the client's document.
+   * 
+   * Called when the client receives an operation from the server.
+   * @param context The client context.
+   * @param operation The operation to apply.
+   * @returns The updated client state.
+   */
   applyServer(context: Client, operation: Operation): ClientState
 
-  // Acknowledge the operation that the client last sent to the server.
+  /**
+   * Acknowledge the latest unacknowledged operation.
+   * 
+   * Called when the client receives an acknowledgement from the server.
+   * @param context The client context.
+   * @returns The updated client state.
+   */
   ackOperation(context: Client): ClientState
 }
 
@@ -84,21 +107,91 @@ class ClientStateBuffered implements ClientState {
   }
 }
 
+
+/**
+ * Represents a client in the text editor.
+ */
 abstract class Client {
+  /**
+   * The current revision number of the client.
+   */
   public revision: number = 0;
+
+  /**
+   * The operation that the client is waiting for acknowledgement from the server.
+   */
   public awaitOperation: Operation | null = null;
+  
+  /**
+   * The operation that is currently buffered by the client.
+   */
   public bufferedOperation: Operation | null = null;
+
+  /**
+   * The current state of the client.
+   */
   public state: ClientState = new ClientStateSync();
 
+  /**
+   * The current content of document.
+   */
   private doc: string = "";
 
+  /**
+   * Apply a remote operation from server to the client's document.
+   * 
+   * Called when the client receives an operation from the server
+   * 
+   * (Usually) should NOT manually called.
+   * @param operation The operation to apply.
+   */
   applyServer(operation: Operation) { this.state = this.state.applyServer(this, operation); }
+
+  /**
+   * Apply a local operation to the client's document and send it to the server.
+   * 
+   * Call this function when the client needs to perform an operation.
+   * @param operation The operation to apply.
+   */
   applyClient(operation: Operation) { this.state = this.state.applyClient(this, operation); }
+
+  /**
+   * Acknowledge the latest unacknowledged operation.
+   * 
+   * Called when the client receives an acknowledgement from the server.
+   * 
+   * (Usually) should NOT manually called.
+   */
   ackOperation() { this.state = this.state.ackOperation(this); }
 
+  /**
+   * Get the current document content.
+   * 
+   * @returns The document content.
+   */
   getDoc() { return this.doc; }
 
+  /**
+   * Apply an operation to the document.
+   * 
+   * Will only update the document and NOT handle the revision, server
+   * and so on.
+   * 
+   * (Usually) should NOT manually called. Consider using `Client.applyClient`.
+   * 
+   * @param operation - The operation to apply.
+   */
   applyOperation(operation: Operation) { this.doc = operation.apply(this.doc); }
+
+  /**
+   * Send an operation to the server.
+   * 
+   * (Usually) should NOT manually called.
+   * 
+   * @param operation - The operation to send.
+   * @param revision - The current revision number (= this.revision).
+   * @returns The updated client instance.
+   */
   abstract sendOperation(operation: Operation, revision: number): this
 }
 
