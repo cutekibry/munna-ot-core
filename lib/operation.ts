@@ -1,18 +1,43 @@
 import _ from "lodash";
 
-
+/**
+ * Represents a basic operation in the operational transformation.
+ */
 type BasicOperation = { retain: number } | { insert: string } | { delete: number };
 
+/**
+ * Checks if the given operation is a retain operation.
+ * @param op The operation to check.
+ * @returns True if the operation is a retain operation, false otherwise.
+ */
 function isRetain(op: BasicOperation): op is { retain: number } {
   return op != null && op.hasOwnProperty("retain");
 }
+
+/**
+ * Checks if the given operation is an insert operation.
+ * @param op The operation to check.
+ * @returns True if the operation is an insert operation, false otherwise.
+ */
 function isInsert(op: BasicOperation): op is { insert: string } {
   return op != null && op.hasOwnProperty("insert");
 }
+
+/**
+ * Checks if the given operation is a delete operation.
+ * @param op The operation to check.
+ * @returns True if the operation is a delete operation, false otherwise.
+ */
 function isDelete(op: BasicOperation): op is { delete: number } {
   return op != null && op.hasOwnProperty("delete");
 }
 
+/**
+ * Checks if the given basic operation is empty.
+ * @param op The basic operation to check.
+ * @returns True if the operation is empty, false otherwise.
+ * @throws {TypeError} If the operation is of unknown type.
+ */
 function isEmptyBasicOp(op: BasicOperation): boolean {
   if (isRetain(op))
     return op.retain === 0;
@@ -24,12 +49,30 @@ function isEmptyBasicOp(op: BasicOperation): boolean {
     throw new TypeError("Unknown type error");
 }
 
-
+/**
+ * Represents an operation in the operational transformation.
+ */
 class Operation {
+  /**
+   * Array of basic operations.
+   */
   operations: BasicOperation[] = [];
+
+  /**
+   * The expected length of the document before applied.
+   */
   baseLength: number = 0;
+
+  /**
+   * The expected length of the document after applied.
+   */
   targetLength: number = 0;
 
+  /**
+   * Adds a retain operation to the operation.
+   * @param n The number of characters to retain.
+   * @returns The updated operation.
+   */
   addRetain(n: number): this {
     if (n === 0)
       return this;
@@ -43,6 +86,12 @@ class Operation {
       this.operations.push({ retain: n });
     return this;
   }
+
+  /**
+   * Adds an insert operation to the operation.
+   * @param str The string to insert.
+   * @returns The updated operation.
+   */
   addInsert(str: string): this {
     if (str === "")
       return this;
@@ -55,6 +104,12 @@ class Operation {
       this.operations.push({ insert: str });
     return this;
   }
+
+  /**
+   * Adds a delete operation to the operation.
+   * @param n The number of characters to delete.
+   * @returns The updated operation.
+   */
   addDelete(n: number): this {
     if (n === 0)
       return this;
@@ -69,6 +124,13 @@ class Operation {
     return this;
   }
 
+  /**
+   * Applies the operation to a document.
+   * @param doc The document to apply the operation to.
+   * @returns The modified document.
+   * @throws {Error} If the operation's base length is not equal to the document's length.
+   * @throws {Error} If the operation's target length is not equal to the document's length.
+   */
   apply(doc: string): string {
     if (doc.length !== this.baseLength)
       throw new Error("The operation's base length must be equal to the document's length.");

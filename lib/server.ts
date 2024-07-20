@@ -1,12 +1,33 @@
-import _ from "lodash"
-import { Operation } from "./operation"
+import _ from "lodash";
+import { Operation } from "./operation";
 
+/**
+ * Represents a server that can connect with multiple clients.
+ */
 abstract class Server {
+  /**
+   * The history of operations performed on the server.
+   */
   public operationHistory: Operation[] = [];
+
+  /**
+   * The current revision number of the server.
+   */
   public revision: number = 0;
-  
+
+  /**
+   * The document content on the server.
+   */
   private doc: string = "";
 
+  /**
+   * Receives an operation from a client and applies it to the server's document.
+   * 
+   * (Usually) should NOT manually called.
+   * @param operation The operation to be applied.
+   * @param fromRevision The revision number from which the operation is received.
+   * @param sessionId The session ID of the client sending the operation.
+   */
   receiveOperation(operation: Operation, fromRevision: number, sessionId: string) {
     let newOp = _.clone(operation);
 
@@ -21,25 +42,29 @@ abstract class Server {
     this.sendOperationExcept(newOp, sessionId);
   }
 
+  /**
+   * Gets the current document on the server.
+   * 
+   * @returns The document content.
+   */
   getDoc() { return this.doc; }
 
   /**
-   * Should send an acknowledge message to the client with `sessionId`.
+   * Sends an acknowledge message to a client with the specified session ID.
    * 
-   * The sent data should be of type `WebDataAck`.
-   * 
-   * @param sessionId The session id of the client to send the acknowledge message to.
-   * @return void
+   * (Usually) should NOT manually called.
+   * @param sessionId The session ID of the client to send the acknowledge message to.
+   * @returns The current instance of the Server class.
    */
   abstract sendAck(sessionId: string): this;
 
   /**
-   * Should send `operation` to all clients except the one with `sessionId`.
+   * Sends an operation to all clients except the one with the specified session ID.
    * 
-   * The sent data should be of type `WebDataOperation`.
-   * 
+   * (Usually) should NOT manually called.
    * @param operation The operation to send.
-   * @param sessionId The session id of the client to exclude.
+   * @param sessionId The session ID of the client to exclude.
+   * @returns The current instance of the Server class.
    */
   abstract sendOperationExcept(operation: Operation, sessionId: string): this;
 }
