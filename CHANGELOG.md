@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/cutekibry/munna-ot-core/compare/v1.0.1...v1.1.0) (2024-07-23)
+
+
+### Features
+
+* export more types and classes  ([#7](https://github.com/cutekibry/munna-ot-core/issues/7)) ([6acb1c5](https://github.com/cutekibry/munna-ot-core/commit/6acb1c5da0fa5e358010bb62a93482804416516b))
+
 ## [1.0.1](https://github.com/cutekibry/munna-ot-core/compare/v1.0.0...v1.0.1) (2024-07-20)
 
 
