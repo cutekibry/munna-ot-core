@@ -7,8 +7,7 @@
   "version": "1.0.1",
   "type": "module",
   "files": [
-    "dist",
-    "doc"
+    "dist"
   ],
   "main": "./dist/munna-ot-core.umd.cjs",
   "module": "./dist/munna-ot-core.js",
