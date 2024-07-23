@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/cutekibry/munna-ot-core/compare/v1.1.0...v1.1.1) (2024-07-23)
+
+
+### Bug Fixes
+
+* release a new version to fix the npm package ([#10](https://github.com/cutekibry/munna-ot-core/issues/10)) ([486d640](https://github.com/cutekibry/munna-ot-core/commit/486d6408e2f568973966f67878e69de876111b7b))
+
 ## [1.1.0](https://github.com/cutekibry/munna-ot-core/compare/v1.0.1...v1.1.0) (2024-07-23)
 
 
